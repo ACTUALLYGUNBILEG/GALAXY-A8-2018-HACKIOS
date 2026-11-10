@@ -115,7 +115,7 @@ jobs:
         if: always()
         run: |
           if [ -f out/build.log ]; then
-            diagnostics=$(tail -n 60 out/build.log)
+            diagnostics=$(tail -n 20 out/build.log)
             message=${diagnostics//'%'/'%25'}
             message=${message//$'\r'/'%0D'}
             message=${message//$'\n'/'%0A'}
