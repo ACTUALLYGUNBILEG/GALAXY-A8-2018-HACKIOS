@@ -7,12 +7,11 @@ BSD initialization, then panicked at `pthread_shims.c:318` because the pthread
 function table was null. The root cause is that the bundled Apple libpthread
 provider was compiled only for the SWEET board. The A8 source-preparation
 script now enables its provider sources and 56-byte storage layout for the
-A5XELTE build. V12 needs a clean Xcode build before another device trial. The
+A5XELTE build. GitHub Actions run [42771897514](https://github.com/ACTUALLYGUNBILEG/GALAXY-A8-2018-HACKIOS/actions/runs/42771897514)
+successfully built XNU 8796.141.3 and uploaded a kernel-only artifact. The
 WSL-only diagnostic build disables `SWEET_HFS`; its donor integration expects
 macOS target headers. Earlier boot milestones and their device results are in
-the bring-up plan. This manual
-GitHub Actions workflow at `.github/workflows/jackpotlte-xnu.yml` remains an
-alternate reproducible build path. It
+the bring-up plan. The workflow at `.github/workflows/jackpotlte-xnu.yml`
 uses a macOS 15 Intel runner and Xcode 16.4, pins the S8 donor and XNU build
 helper, stages the known A5XELTE donor patch subset, then applies the local A8
 overrides. The donor's GIC patch is trimmed only to omit its conflicting board
@@ -24,18 +23,19 @@ still the A5XELTE donor config with A8 values overlaid, so a successful compile
 is only the next diagnostic milestone, not proof the kernel will boot on the
 A530N.
 
-To run it, put this source folder in a GitHub repository, then choose **Actions
-→ jackpotlte first XNU build → Run workflow**. The workflow is manual-only. The
+The workflow runs on pushes to `main` and supports **Actions → jackpotlte first
+XNU build → Run workflow**. Run 42771897514 uploaded the artifact
+`jackpotlte-xnu-kernel` (73,587,821 bytes, seven-day retention). The
 `.gitignore` excludes the local BOOT readback, probe images, and generated ADT;
 do not add those device images to a public source repository. Download the
-`jackpotlte-xnu-kernel` artifact and inspect its build log and SHA-256 before
-using it in a Samsung BOOT candidate.
+artifact while signed in to GitHub and inspect its format and SHA-256 before
+packaging it in a Samsung BOOT candidate.
 
-This workspace currently has no Git remote, so the workflow is prepared but
-cannot be triggered from this folder yet. No source or device image has been
-published. After the source is available in the user's GitHub repository, run
-the workflow to build the pthread-enabled diagnostic kernel, then package and
-inspect a BOOT candidate locally before flashing it from TWRP.
+This CI artifact is kernel-only. It has not been downloaded locally, wrapped
+in the Samsung BOOT image, or tested on the A530N. Preserve the validated
+header, DTBH, and ramdisk when preparing a candidate; inspect the full package
+and keep the TWRP BOOT backup available before a BOOT-only test. Do not treat
+the successful build as proof of a working boot or an iOS install image.
 
 The runner choice follows GitHub's current runner images: macOS 14 was retired
 on 2026-11-02, while the macOS 15 image includes Xcode 16.4. The S8 donor adds
