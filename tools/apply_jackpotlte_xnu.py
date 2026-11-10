@@ -16,9 +16,14 @@ def apply_file(tree, rel, edits):
     text = path.read_text()
     for old, new, expected in edits:
         found = text.count(old)
-        if found != expected:
+        if found == expected:
+            text = text.replace(old, new)
+        elif found == 0 and text.count(new) == expected:
+            # The pinned donor patch stack already carries this exact override.
+            # Accept it as-is so later device-specific edits remain repeatable.
+            continue
+        else:
             raise SystemExit(f"{rel}: expected {expected} occurrence(s), found {found}: {old!r}")
-        text = text.replace(old, new)
     return path, text
 
 
@@ -90,9 +95,9 @@ def main():
              "\t#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
         ],
         "bsd/conf/Makefile.template": [
-            ("# This provider is built into SWEET; other boards use their normal kext.\n"
-             "ifeq ($(CURRENT_MACHINE_CONFIG),SWEET)\n",
-             "# This provider is built into SWEET and A5XELTE diagnostic kernels.\n"
+            ("# This provider is built into SWEET; other boards use their normal kext.\n",
+             "# This provider is built into SWEET and A5XELTE diagnostic kernels.\n", 1),
+            ("ifeq ($(CURRENT_MACHINE_CONFIG),SWEET)\n",
              "ifneq ($(filter $(CURRENT_MACHINE_CONFIG),SWEET A5XELTE),)\n", 1),
         ],
         "osfmk/arm64/start.s": [
