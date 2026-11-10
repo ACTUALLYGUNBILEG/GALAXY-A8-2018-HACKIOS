@@ -96,6 +96,7 @@ jobs:
           set +e
           TRACE=1 bash build.sh 2>&1 | tee "$GITHUB_WORKSPACE/out/build.log"
           build_status=${PIPESTATUS[0]}
+          echo "build.sh exit status: $build_status" | tee -a "$GITHUB_WORKSPACE/out/build.log"
           echo "build.sh exit status: $build_status"
           if [ "$build_status" -ne 0 ]; then
             echo "Last 60 build log lines:"
@@ -115,12 +116,10 @@ jobs:
         run: |
           if [ -f out/build.log ]; then
             diagnostics=$(tail -n 60 out/build.log)
-            while IFS= read -r line; do
-              message=${line//'%'/'%25'}
-              message=${message//$'\r'/'%0D'}
-              message=${message//$'\n'/'%0A'}
-              echo "::warning file=.github/workflows/jackpotlte-xnu.yml,line=82,title=XNU build log::$message"
-            done < <(printf '%s\n' "$diagnostics")
+            message=${diagnostics//'%'/'%25'}
+            message=${message//$'\r'/'%0D'}
+            message=${message//$'\n'/'%0A'}
+            echo "::warning file=.github/workflows/jackpotlte-xnu.yml,line=82,title=XNU build log::$message"
             {
               echo '## XNU build diagnostics'
               echo '```text'
