@@ -94,6 +94,22 @@ jobs:
           cp -R dxb/fakeroot/System/Library/Kernels/. out/ 2>/dev/null || true
           (cd out && shasum -a 256 kernel.* > SHA256SUMS) || true
 
+      - name: Summarize XNU build diagnostics
+        if: always()
+        run: |
+          if [ -f out/build.log ]; then
+            diagnostics=$(grep -E -i -C 3 'error:|fatal error:|undefined symbols|ld:|failed|error [0-9]+' out/build.log | tail -n 100 || true)
+            if [ -z "$diagnostics" ]; then
+              diagnostics=$(tail -n 80 out/build.log)
+            fi
+            {
+              echo '## XNU build diagnostics'
+              echo '```text'
+              printf '%s\n' "$diagnostics"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
