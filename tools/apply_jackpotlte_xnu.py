@@ -74,6 +74,63 @@ def main():
              "\t\t\t    g_crypto_funcs->ccsha1_di && g_crypto_funcs->ccdigest_init_fn &&\n"
              "\t\t\t    g_crypto_funcs->ccdigest_update_fn) {", 1),
         ],
+        # The diagnostic kernel has no corecrypto kext. Route the legacy AES
+        # CBC/ECB API and the available SHA-256/MD5 paths through the portable
+        # BearSSL implementations already staged by the build workflow.
+        "libkern/crypto/corecrypto_aes.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ("/* SWEET has a built-in portable AES provider for the legacy CBC/ECB API. */\n",
+             "/* SWEET/A5XELTE diagnostics use portable AES for the legacy CBC/ECB API. */\n", 1),
+        ],
+        "libkern/crypto/sweet_aes.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_aes_ct.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_aes_ct_enc.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_aes_ct_dec.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_aes_ct_cbcenc.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_aes_ct_cbcdec.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/corecrypto_sha2.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            (" * SWEET has no corecrypto kext, so g_crypto_funcs stays NULL. SHA-256 uses\n",
+             " * SWEET/A5XELTE diagnostics have no corecrypto kext. SHA-256 uses\n", 1),
+        ],
+        "libkern/crypto/corecrypto_md5.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ("#else /* !ARM64_BOARD_CONFIG_SWEET */\n",
+             "#else /* neither SWEET nor A5XELTE */\n", 1),
+        ],
+        "libkern/crypto/sweet_md5.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_enc32le.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "libkern/crypto/sweet_dec32le.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
         "bsd/pthread/sweet_pthread_init.c": [
             ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
              "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
