@@ -1,0 +1,19 @@
+# Local reference checkouts, downloaded toolchains, and scratch notes
+work/
+
+# Cross-build output
+shim/jackpotlte/out/
+shim/jackpotlte/outxnu/
+__pycache__/
+*.pyc
+
+# Device-specific backups and firmware (never commit)
+backup/
+*.ipsw
+*.dmg
+boot-stock.img
+recovery.img
+*.tar.md5
+
+# Local build and device artifacts; BOOT images include Samsung firmware.
+outputs/

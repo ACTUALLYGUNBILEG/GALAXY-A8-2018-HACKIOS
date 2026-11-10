@@ -1,0 +1,100 @@
+name: jackpotlte first XNU build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jackpotlte-xnu-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # macOS 14 was retired in November 2026. Xcode 16.4 is available on this
+    # macOS 15 runner; the selected XNU patch set includes its IORPC ABI field.
+    runs-on: macos-15-intel
+    timeout-minutes: 120
+    env:
+      S8_REPO: https://github.com/Floppikrob/ios-galaxy-s8.git
+      S8_SHA: 04b41729e89f702261e5599dbe3677e8ee5f5ee3
+      DXB_REPO: https://github.com/blacktop/darwin-xnu-build
+      DXB_SHA: 663906528d1cd5ea8fde7de6f16de73db9511549
+      MACOS_VERSION: "13.5"
+      KERNEL_CONFIG: DEVELOPMENT
+      MACHINE_CONFIG: A5XELTE
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch pinned donor and build helper
+        run: |
+          git init -q reference
+          git -C reference fetch -q --depth 1 "$S8_REPO" "$S8_SHA"
+          git -C reference checkout -q --detach FETCH_HEAD
+          test "$(git -C reference rev-parse HEAD)" = "$S8_SHA"
+
+          git init -q dxb
+          git -C dxb fetch -q --depth 1 "$DXB_REPO" "$DXB_SHA"
+          git -C dxb checkout -q --detach FETCH_HEAD
+
+      - name: Prepare the A8 XNU source tree
+        run: |
+          python3 tools/prepare_jackpotlte_xnu_ci.py \
+            reference/xnu/patches work/jackpotlte-patches
+          mkdir -p dxb/patches
+          cp work/jackpotlte-patches/*.patch work/jackpotlte-patches/*.sh dxb/patches/
+
+          bash reference/tools/dreamlte/prep-xnu-tree.sh \
+            "$PWD/work/jackpotlte-patches" "$PWD/work/xnu-prep"
+          python3 tools/apply_jackpotlte_xnu.py work/xnu-prep/xnu
+          cp -a work/xnu-prep/xnu dxb/xnu
+
+      - name: Select Xcode 16.4
+        run: |
+          XCODE=/Applications/Xcode_16.4.app
+          test -d "$XCODE/Contents/Developer"
+          sudo xcode-select --switch "$XCODE/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcrun --find iig
+
+      - name: Install build dependencies
+        run: brew install jq gum bash cmake ninja
+
+      - name: Configure A53-safe code generation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('dxb/build.sh')
+          text = path.read_text()
+          old = 'ARCHS="x86_64 arm64e" VALID_ARCHS="x86_64 arm64e"'
+          new = "ARCHS=arm64 VALID_ARCHS=arm64 OTHER_CFLAGS='-mkernel -nostdinc -Wno-packed -mcpu=cortex-a53 -march=armv8-a+crypto'"
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one A53 compiler flag insertion point in {path}')
+          path.write_text(text.replace(old, new))
+          PY
+
+      - name: Build XNU 8796
+        working-directory: dxb
+        env:
+          MAKEFLAGS: -k
+        run: bash build.sh
+
+      - name: Collect kernel artifact
+        if: always()
+        run: |
+          mkdir -p out
+          cp -R dxb/fakeroot/System/Library/Kernels/. out/ 2>/dev/null || true
+          (cd out && shasum -a 256 kernel.* > SHA256SUMS) || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jackpotlte-xnu-kernel
+          path: out/
+          if-no-files-found: warn
+          retention-days: 7

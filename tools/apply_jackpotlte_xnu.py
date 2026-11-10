@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Apply the first SM-A530N hardware overrides to an A5XELTE XNU tree.
+
+Run after the shared XNU patches and the A5XELTE/GICv2 patches:
+    python tools/apply_jackpotlte_xnu.py work/xnu-8796.141.3
+
+This prepares a single-core entry kernel. It does not build XNU or create a
+Samsung BOOT image. The RAM window and timer route remain bring-up candidates.
+"""
+import argparse
+from pathlib import Path
+
+
+def apply_file(tree, rel, edits):
+    path = tree / rel
+    text = path.read_text()
+    for old, new, expected in edits:
+        found = text.count(old)
+        if found != expected:
+            raise SystemExit(f"{rel}: expected {expected} occurrence(s), found {found}: {old!r}")
+        text = text.replace(old, new)
+    return path, text
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("xnu_tree", type=Path)
+    args = parser.parse_args()
+    tree = args.xnu_tree.resolve()
+    if not (tree / "osfmk/arm64/start.s").is_file():
+        raise SystemExit(f"{tree}: not an XNU source tree")
+
+    plans = {
+        "pexpert/pexpert/arm64/A5XELTE.h": [(
+            "#define A5XELTE_VTIMER_INTID         27\n",
+            """#define A5XELTE_VTIMER_INTID         30
+
+/* Galaxy A8 2018 SM-A530N / Exynos 7885 first-kernel values. */
+#define A5_FB_PHYS                    0xEC000000
+#define A5_FB_WIDTH                   1080
+#define A5_FB_HEIGHT                  2220
+#define A5_FB_STRIDE                  4320
+#define A5_FB_2M_BLOCKS               10
+#define A5_ENTRY_MARKER_PHYS          0xEC923FF8
+#define A5_BOOT_MPIDR                 0x100
+#define A5_USE_PHYS_TIMER             1
+""", 1)],
+        "iokit/KernelConfigTables.cpp": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ("    \"     'IONameMatch'     = 'xiaomi,sweet';\"\n",
+             "#if defined(ARM64_BOARD_CONFIG_A5XELTE)\n"
+             "    \"     'IONameMatch'     = 'samsung,a5xelte';\"\n"
+             "#else\n"
+             "    \"     'IONameMatch'     = 'xiaomi,sweet';\"\n"
+             "#endif\n", 1),
+            ("    \"     'IONameMatch'     = 'qcom,kryo470';\"\n",
+             "#if defined(ARM64_BOARD_CONFIG_A5XELTE)\n"
+             "    \"     'IONameMatch'     = 'arm,cortex-a53';\"\n"
+             "#else\n"
+             "    \"     'IONameMatch'     = 'qcom,kryo470';\"\n"
+             "#endif\n", 1),
+        ],
+        "bsd/pthread/sweet_pthread_init.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ('    kprintf("SWEET pthread: libpthread-514.100.2 registered\\n");\n',
+             '#if defined(ARM64_BOARD_CONFIG_A5XELTE)\n'
+             '    kprintf("A5XELTE pthread: libpthread-514.100.2 registered\\n");\n'
+             '#else\n'
+             '    kprintf("SWEET pthread: libpthread-514.100.2 registered\\n");\n'
+             '#endif\n', 1),
+            ("#endif /* ARM64_BOARD_CONFIG_SWEET */\n",
+             "#endif /* SWEET || A5XELTE */\n", 1),
+        ],
+        "bsd/pthread/sweet_pthread_support.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ("#endif /* ARM64_BOARD_CONFIG_SWEET */\n",
+             "#endif /* SWEET || A5XELTE */\n", 1),
+        ],
+        "bsd/pthread/sweet_pthread_synch.c": [
+            ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+            ("#endif /* ARM64_BOARD_CONFIG_SWEET */\n",
+             "#endif /* SWEET || A5XELTE */\n", 1),
+        ],
+        "bsd/sys/pthread_internal.h": [
+            ("\t#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
+             "\t#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
+        ],
+        "bsd/conf/Makefile.template": [
+            ("# This provider is built into SWEET; other boards use their normal kext.\n"
+             "ifeq ($(CURRENT_MACHINE_CONFIG),SWEET)\n",
+             "# This provider is built into SWEET and A5XELTE diagnostic kernels.\n"
+             "ifneq ($(filter $(CURRENT_MACHINE_CONFIG),SWEET A5XELTE),)\n", 1),
+        ],
+        "osfmk/arm64/start.s": [
+            ("MOV64\tx10, 0x469ff100", "MOV64\tx10, A5_ENTRY_MARKER_PHYS", 1),
+            ("MOV64\tx10, 0x6705d0c0", "MOV64\tx10, (A5_FB_PHYS + 88 * A5_FB_STRIDE + 240 * 4)", 1),
+            ("MOV64\tx10, 0x6707ecc0", "MOV64\tx10, (A5_FB_PHYS + 120 * A5_FB_STRIDE + 240 * 4)", 1),
+            ("MOV64\tx10, 0x670a08c0", "MOV64\tx10, (A5_FB_PHYS + 152 * A5_FB_STRIDE + 240 * 4)", 1),
+            ("MOV64\tx10, 0x670c24c0", "MOV64\tx10, (A5_FB_PHYS + 184 * A5_FB_STRIDE + 240 * 4)", 1),
+            ("MOV64\tx10, 0x670e40c0", "MOV64\tx10, (A5_FB_PHYS + 216 * A5_FB_STRIDE + 240 * 4)", 1),
+            ("mov\t\tx15, #4320", "mov\t\tx15, #A5_FB_STRIDE", 2),
+            ("mov\tx15, #4320", "mov\tx15, #A5_FB_STRIDE", 3),
+            ("MOV64\tx0, 0x67000000\n\tmov\t\tx4, x0\n\tmov\t\tx5, #5\n",
+             "MOV64\tx0, A5_FB_PHYS\n\tmov\t\tx4, x0\n\tmov\t\tx5, #A5_FB_2M_BLOCKS\n", 1),
+            ("MOV64\tx10, 0x67000000", "MOV64\tx10, A5_FB_PHYS", 1),
+            ("mov\t\tx13, #5\nLa5_fb_attr:", "mov\t\tx13, #A5_FB_2M_BLOCKS\nLa5_fb_attr:", 1),
+            ("/* Five 2 MiB blocks map the 1080x1920 scanout buffer VA=PA.",
+             "/* A5_FB_2M_BLOCKS 2 MiB blocks map the scanout buffer VA=PA.", 1),
+            ("MOV64\tx4, 0x67000000\n\tmov\tx5, #4320",
+             "MOV64\tx4, A5_FB_PHYS\n\tmov\tx5, #A5_FB_STRIDE", 1),
+        ],
+        "iokit/Kernel/arm/SweetCPU.cpp": [
+            ("\t/* The supplied ADT has cpu0 as the boot CPU and ascending A55 nodes. */\n"
+             "\tif (topology->boot_cpu->cpu_id != 0 || topology->boot_cpu->phys_id != 0) {\n"
+             "\t\tpanic(\"SWEET CPU: expected boot MPIDR 0 and logical CPU 0\");\n",
+             "\t/* The ADT's single active CPU is the A53 boot core at MPIDR 0x100. */\n"
+             "\tif (topology->boot_cpu->cpu_id != 0 || topology->boot_cpu->phys_id != A5_BOOT_MPIDR) {\n"
+             "\t\tpanic(\"jackpotlte: expected boot MPIDR %#x and logical CPU 0\", A5_BOOT_MPIDR);\n", 1),
+        ],
+        "pexpert/arm/pe_fiq.c": [
+            ("\t/* INTID 27 is the virtual timer PPI; SGI 1 is the local self signal. */\n"
+             "\ta5_gic_write32(a5_gicd_base, 0x080,\n"
+             "\t    a5_gic_read32(a5_gicd_base, 0x080) | (1U << 27) | (1U << 1));",
+             "\t/* INTID 30 is the physical timer PPI; SGI 1 is the local self signal. */\n"
+             "\ta5_gic_write32(a5_gicd_base, 0x080,\n"
+             "\t    a5_gic_read32(a5_gicd_base, 0x080) | (1U << A5XELTE_VTIMER_INTID) | (1U << 1));", 1),
+            ("\ta5_gic_write32(a5_gicd_base, 0x100, (1U << 27) | (1U << 1));",
+             "\ta5_gic_write32(a5_gicd_base, 0x100, (1U << A5XELTE_VTIMER_INTID) | (1U << 1));", 1),
+        ],
+        "osfmk/arm64/machine_routines.c": [
+            ('\t\t__builtin_arm_wsr64("CNTV_TVAL_EL0", (uint64_t)dec_value);\n',
+             '#if defined(A5_USE_PHYS_TIMER)\n\t\t__builtin_arm_wsr64("CNTP_TVAL_EL0", (uint64_t)dec_value);\n#else\n\t\t__builtin_arm_wsr64("CNTV_TVAL_EL0", (uint64_t)dec_value);\n#endif\n', 1),
+            ('\t\twide_val = __builtin_arm_rsr64("CNTV_TVAL_EL0");\n',
+             '#if defined(A5_USE_PHYS_TIMER)\n\t\twide_val = __builtin_arm_rsr64("CNTP_TVAL_EL0");\n#else\n\t\twide_val = __builtin_arm_rsr64("CNTV_TVAL_EL0");\n#endif\n', 1),
+            ('\tuint64_t cntv_ctl = __builtin_arm_rsr64("CNTV_CTL_EL0");\n',
+             '#if defined(A5_USE_PHYS_TIMER)\n\tuint64_t cntv_ctl = __builtin_arm_rsr64("CNTP_CTL_EL0");\n#else\n\tuint64_t cntv_ctl = __builtin_arm_rsr64("CNTV_CTL_EL0");\n#endif\n', 1),
+            ('\t__builtin_arm_wsr64("CNTV_CTL_EL0", cntvctl);\n'
+             '\t/* disable the physical timer as a precaution, as its registers reset to architecturally unknown values */\n'
+             '\t__builtin_arm_wsr64("CNTP_CTL_EL0", CNTP_CTL_EL0_IMASKED);\n',
+             '#if defined(A5_USE_PHYS_TIMER)\n'
+             '\t__builtin_arm_wsr64("CNTP_CTL_EL0", cntvctl);\n'
+             '\t__builtin_arm_wsr64("CNTV_CTL_EL0", CNTV_CTL_EL0_IMASKED);\n'
+             '#else\n'
+             '\t__builtin_arm_wsr64("CNTV_CTL_EL0", cntvctl);\n'
+             '\t/* disable the physical timer as a precaution, as its registers reset to architecturally unknown values */\n'
+             '\t__builtin_arm_wsr64("CNTP_CTL_EL0", CNTP_CTL_EL0_IMASKED);\n'
+             '#endif\n', 1),
+        ],
+    }
+
+    pending = []
+    for rel, edits in plans.items():
+        pending.append(apply_file(tree, rel, edits))
+    for path, text in pending:
+        path.write_text(text)
+        print(f"updated {path.relative_to(tree)}")
+    print("jackpotlte XNU source overrides applied; kernel not built")
+
+
+if __name__ == "__main__":
+    main()
