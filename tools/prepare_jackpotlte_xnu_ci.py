@@ -72,7 +72,23 @@ def main() -> None:
         path = source / name
         if not path.is_file():
             raise SystemExit(f"required source-staging script is missing: {name}")
-        shutil.copy2(path, destination / name)
+        output = destination / name
+        if name == "0026-stage-hfs.sh":
+            # 0026-sweet-builtin-hfs.patch creates this directory for its
+            # integration shims before the script stages Apple's HFS sources.
+            text = path.read_text(encoding="utf-8")
+            old = """if target.exists():
+    raise SystemExit(f'refusing to overwrite existing HFS sources: {target}')
+"""
+            new = """if any((target / name).exists() for name in ("core", "hfs_encodings")):
+    raise SystemExit(f'refusing to overwrite existing HFS sources: {target}')
+target.mkdir(parents=True, exist_ok=True)
+"""
+            if text.count(old) != 1:
+                raise SystemExit(f"unexpected HFS staging guard in {path}")
+            output.write_text(text.replace(old, new), encoding="utf-8")
+        else:
+            shutil.copy2(path, output)
 
     print(f"prepared {len(chosen)} donor patches and {len(STAGE_SCRIPTS)} staging scripts")
 
