@@ -13,10 +13,10 @@ def patch(tree: Path, rel: str, edits: list[tuple[str, str]]) -> None:
     original = text
     for old, new in edits:
         count = text.count(old)
+        if text.count(new) == 1:
+            continue
         if count == 1:
             text = text.replace(old, new, 1)
-        elif count == 0 and text.count(new) == 1:
-            continue
         else:
             raise SystemExit(
                 f"{path}: expected one patch anchor, found {count}: {old[:100]!r}"
@@ -322,8 +322,8 @@ sweet_early_map_final(void)
         ("#include <san/kasan.h>\n", "#include <san/kasan.h>\n#include <arm64/sweet_early.h>\n"),
         ("\tkernel_startup_initialize_upto(STARTUP_SUB_PMAP_STEAL);\n",
          "\tkernel_startup_initialize_upto(STARTUP_SUB_PMAP_STEAL);\n\tsweet_early_mark(38, \"STARTUP_SUB_PMAP_STEAL completed\");\n"),
-        ("\t    sizeof(vm_page_bucket_t), 0);\n",
-         "\t    sizeof(vm_page_bucket_t), 0);\n\tsweet_early_mark(39, \"vm page buckets allocated\");\n"),
+        ("\tvm_page_buckets = (vm_page_bucket_t *)\n\t    pmap_steal_memory(vm_page_bucket_count *\n\t    sizeof(vm_page_bucket_t), 0);\n",
+         "\tvm_page_buckets = (vm_page_bucket_t *)\n\t    pmap_steal_memory(vm_page_bucket_count *\n\t    sizeof(vm_page_bucket_t), 0);\n\tsweet_early_mark(39, \"vm page buckets allocated\");\n"),
         ("\t    sizeof(lck_spin_t), 0);\n",
          "\t    sizeof(lck_spin_t), 0);\n\tsweet_early_mark(40, \"vm page bucket locks allocated\");\n"),
         ("\t}\n\n\tfor (i = 0; i < vm_page_bucket_lock_count; i++) {\n",
@@ -334,12 +334,10 @@ sweet_early_map_final(void)
          "\tpmap_startup(&virtual_space_start, &virtual_space_end);\n\tsweet_early_mark(55, \"pmap_startup returned\");\n"),
         ("\tuint_t          low_page_count = 0;\n",
          "\tuint_t          low_page_count = 0;\n\tsweet_early_mark(43, \"pmap_startup entered\");\n"),
-        ("\tnpages = (uint_t)(mem_sz / (PAGE_SIZE + sizeof(*vm_pages)));\n",
-         "\tnpages = (uint_t)(mem_sz / (PAGE_SIZE + sizeof(*vm_pages)));\n\tsweet_early_mark(44, \"pmap page count computed\");\n"),
+        ("\tnpages = (uint_t)(mem_sz / (PAGE_SIZE + sizeof(*vm_pages)));    /* scaled to include the vm_page_ts */\n",
+         "\tnpages = (uint_t)(mem_sz / (PAGE_SIZE + sizeof(*vm_pages)));    /* scaled to include the vm_page_ts */\n\tsweet_early_mark(44, \"pmap page count computed\");\n"),
         ("\tvm_pages = (vm_page_t) pmap_steal_freeable_memory(npages * sizeof *vm_pages);\n",
          "\tvm_pages = (vm_page_t) pmap_steal_freeable_memory(npages * sizeof *vm_pages);\n\tsweet_early_mark(45, \"vm_pages array allocated\");\n"),
-        ("\tvm_page_pages_count = 0;\n",
-         "\tvm_page_pages_count = 0;\n")
     ])
 
 
