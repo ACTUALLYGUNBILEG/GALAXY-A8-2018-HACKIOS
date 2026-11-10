@@ -66,6 +66,14 @@ def main():
              "    \"     'IONameMatch'     = 'qcom,kryo470';\"\n"
              "#endif\n", 1),
         ],
+        "iokit/Kernel/IOPlatformExpert.cpp": [
+            ("#include <libkern/crypto/sha1.h>\n",
+             "#include <libkern/crypto/sha1.h>\n#include <libkern/crypto/crypto_internal.h>\n", 1),
+            ("if (data2 && data2->getLength() == 4) {",
+             "if (data2 && data2->getLength() == 4 && g_crypto_funcs &&\n"
+             "\t\t\t    g_crypto_funcs->ccsha1_di && g_crypto_funcs->ccdigest_init_fn &&\n"
+             "\t\t\t    g_crypto_funcs->ccdigest_update_fn) {", 1),
+        ],
         "bsd/pthread/sweet_pthread_init.c": [
             ("#if defined(ARM64_BOARD_CONFIG_SWEET)\n",
              "#if defined(ARM64_BOARD_CONFIG_SWEET) || defined(ARM64_BOARD_CONFIG_A5XELTE)\n", 1),
