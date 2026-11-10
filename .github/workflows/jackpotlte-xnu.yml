@@ -82,7 +82,10 @@ jobs:
         working-directory: dxb
         env:
           MAKEFLAGS: -k
-        run: bash build.sh
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          set -o pipefail
+          bash build.sh 2>&1 | tee "$GITHUB_WORKSPACE/out/build.log"
 
       - name: Collect kernel artifact
         if: always()
