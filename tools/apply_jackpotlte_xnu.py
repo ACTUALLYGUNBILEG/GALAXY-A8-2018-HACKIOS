@@ -127,12 +127,25 @@ def main():
              "MOV64\tx4, A5_FB_PHYS\n\tmov\tx5, #A5_FB_STRIDE", 1),
         ],
         "iokit/Kernel/arm/SweetCPU.cpp": [
+            ("\tuint32_t initialized = 0; /* release/acquire publication after initCPU sends SGI */",
+             "\tuint32_t initialized = 0; /* release/acquire publication after local initCPU signal handling */", 1),
+            ("extern \"C\" boolean_t sweet_cpu_signal_is_enabled(unsigned int cpu);\n",
+             "extern \"C\" boolean_t sweet_cpu_signal_is_enabled(unsigned int cpu);\n"
+             "extern \"C\" void cpu_signal_handler(void);\n", 1),
             ("\t/* The supplied ADT has cpu0 as the boot CPU and ascending A55 nodes. */\n"
              "\tif (topology->boot_cpu->cpu_id != 0 || topology->boot_cpu->phys_id != 0) {\n"
              "\t\tpanic(\"SWEET CPU: expected boot MPIDR 0 and logical CPU 0\");\n",
              "\t/* The ADT's single active CPU is the A53 boot core at MPIDR 0x100. */\n"
              "\tif (topology->boot_cpu->cpu_id != 0 || topology->boot_cpu->phys_id != A5_BOOT_MPIDR) {\n"
              "\t\tpanic(\"jackpotlte: expected boot MPIDR %#x and logical CPU 0\", A5_BOOT_MPIDR);\n", 1),
+            ("\t/* Secondary startup runs at splsched: queue the self-IPI and return.\n"
+             "\t * startAll waits for its delivery after the startup thread unmasks IRQs.\n"
+             "\t * Waiting here with DAIF.I set would deadlock every secondary. */\n"
+             "\tsignalCPU(this);",
+             "\t/* This diagnostic ADT exposes only the already-running boot CPU. Clear\n"
+             "\t * XNU's initial SIGPdisabled state locally; the donor GICv2 SGI path\n"
+             "\t * can deadlock startup before ml_init_interrupt() completes. */\n"
+             "\tcpu_signal_handler();", 1),
         ],
         "pexpert/arm/pe_fiq.c": [
             ("\t/* INTID 27 is the virtual timer PPI; SGI 1 is the local self signal. */\n"
