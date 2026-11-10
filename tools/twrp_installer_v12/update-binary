@@ -5,8 +5,8 @@ set -u
 OUTFD="$2"
 ZIPFILE="$3"
 IMG="/tmp/jackpotlte-xnu-v12.img"
-EXPECTED_SHA256="2cd53d95863631da2a8fa474af316fe6e5357dbd8ccafbc850c76390be5b96b7"
-EXPECTED_SIZE="17192976"
+EXPECTED_SHA256="__IMAGE_SHA256__"
+EXPECTED_SIZE="__IMAGE_SIZE__"
 PARTITION_SIZE="33554432"
 
 ui_print() {
@@ -19,8 +19,9 @@ abort() {
   exit 1
 }
 
-ui_print "A530N XNU v12 diagnostic installer"
+ui_print "A530N XNU diagnostic BOOT installer"
 ui_print "This writes BOOT only; it does not install iOS or Android."
+ui_print "Candidate: __CANDIDATE_NAME__"
 
 MODEL="$(getprop ro.product.model 2>/dev/null || true)"
 DEVICE="$(getprop ro.product.device 2>/dev/null || true)"
