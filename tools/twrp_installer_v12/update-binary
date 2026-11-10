@@ -1,0 +1,69 @@
+#!/sbin/sh
+# TWRP installer for the experimental Galaxy A8 2018 XNU v12 BOOT image.
+set -u
+
+OUTFD="$2"
+ZIPFILE="$3"
+IMG="/tmp/jackpotlte-xnu-v12.img"
+EXPECTED_SHA256="2cd53d95863631da2a8fa474af316fe6e5357dbd8ccafbc850c76390be5b96b7"
+EXPECTED_SIZE="17192976"
+PARTITION_SIZE="33554432"
+
+ui_print() {
+  printf 'ui_print %s\nui_print\n' "$*" > "/proc/self/fd/$OUTFD" 2>/dev/null || true
+}
+
+abort() {
+  ui_print "ERROR: $*"
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+ui_print "A530N XNU v12 diagnostic installer"
+ui_print "This writes BOOT only; it does not install iOS or Android."
+
+MODEL="$(getprop ro.product.model 2>/dev/null || true)"
+DEVICE="$(getprop ro.product.device 2>/dev/null || true)"
+BUILD_DEVICE="$(getprop ro.build.product 2>/dev/null || true)"
+VENDOR_DEVICE="$(getprop ro.product.vendor.device 2>/dev/null || true)"
+
+# Samsung/TWRP reports this target's model as Galaxy_A8_2018. Use the
+# device codename, which the connected recovery reports as jackpotlte.
+case "$DEVICE:$BUILD_DEVICE:$VENDOR_DEVICE" in
+  *jackpotlte*) ;;
+  *) abort "wrong device: model='$MODEL', device='$DEVICE', build='$BUILD_DEVICE', vendor='$VENDOR_DEVICE'" ;;
+esac
+
+unzip -p "$ZIPFILE" boot.img > "$IMG" || abort "could not extract boot.img"
+ACTUAL_SIZE="$(wc -c < "$IMG" | tr -d ' ')"
+[ "$ACTUAL_SIZE" = "$EXPECTED_SIZE" ] || abort "image size mismatch: $ACTUAL_SIZE"
+ACTUAL_SHA256="$(sha256sum "$IMG" 2>/dev/null | awk '{print $1}')"
+[ "$ACTUAL_SHA256" = "$EXPECTED_SHA256" ] || abort "image SHA-256 mismatch"
+
+TARGET=""
+TARGET_REAL=""
+for p in /dev/block/by-name/BOOT /dev/block/by-name/boot /dev/block/platform/*/by-name/BOOT /dev/block/platform/*/by-name/boot /dev/block/platform/*/*/by-name/BOOT /dev/block/platform/*/*/by-name/boot /dev/block/mmcblk0p12; do
+  [ -b "$p" ] || continue
+  real="$(readlink -f "$p" 2>/dev/null || echo "$p")"
+  if [ -z "$TARGET" ]; then
+    TARGET="$p"
+    TARGET_REAL="$real"
+  elif [ "$TARGET_REAL" != "$real" ]; then
+    abort "multiple distinct BOOT partitions found"
+  fi
+done
+[ -n "$TARGET" ] || abort "could not find the BOOT block partition"
+
+ACTUAL_PARTITION_SIZE="$(blockdev --getsize64 "$TARGET" 2>/dev/null || echo 0)"
+[ "$ACTUAL_PARTITION_SIZE" = "$PARTITION_SIZE" ] || abort "BOOT partition size is $ACTUAL_PARTITION_SIZE bytes; expected 33554432"
+
+ui_print "Device check passed: $DEVICE"
+ui_print "Writing only BOOT: $TARGET"
+dd if="$IMG" of="$TARGET" bs=4096 2>/dev/null || abort "BOOT write failed; restore your TWRP BOOT backup"
+sync
+
+READBACK="$(dd if="$TARGET" bs=1M count=17 2>/dev/null | head -c "$EXPECTED_SIZE" | sha256sum | awk '{print $1}')"
+[ "$READBACK" = "$EXPECTED_SHA256" ] || abort "readback verification failed; restore your TWRP BOOT backup"
+
+ui_print "BOOT write and readback hash verified. Reboot to Recovery first if needed."
+exit 0
