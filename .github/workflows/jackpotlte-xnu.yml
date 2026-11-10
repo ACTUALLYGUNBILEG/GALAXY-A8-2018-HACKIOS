@@ -77,11 +77,10 @@ jobs:
               raise SystemExit(f'expected one A53 compiler flag insertion point in {path}')
           text = text.replace(old, new)
 
-          # BSD sed's optional interval in the donor include-path rewrite
-          # exits on the macOS runner. Two literal substitutions preserve
-          # trailing include flags and handle both known Apple path forms.
+          # Replace the donor's sed expression with literal string edits;
+          # preserve all trailing include flags and handle both Apple forms.
           old_sed = "sed -i '' 's|^\\(INCFLAGS_SDK[[:space:]]*=\\) -I$(SDKROOT)/usr/local/include/\\(kernel\\)\\{0,1\\}|\\1 -I$(FAKEROOT_DIR)/usr/local/include/kernel|' \"${WORK_DIR}/xnu/makedefs/MakeInc.def\""
-          new_sed = "sed -i '' 's|$(SDKROOT)/usr/local/include/kernel|$(FAKEROOT_DIR)/usr/local/include/kernel|g;s|$(SDKROOT)/usr/local/include/|$(FAKEROOT_DIR)/usr/local/include/kernel|g' \"${WORK_DIR}/xnu/makedefs/MakeInc.def\""
+          new_sed = "python3 -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1]); s=p.read_text(); s=s.replace(\"$(SDKROOT)/usr/local/include/kernel\", \"$(FAKEROOT_DIR)/usr/local/include/kernel\").replace(\"$(SDKROOT)/usr/local/include/\", \"$(FAKEROOT_DIR)/usr/local/include/kernel\"); p.write_text(s)' \"${WORK_DIR}/xnu/makedefs/MakeInc.def\""
           if text.count(old_sed) != 1:
               raise SystemExit(f'expected one donor include-path rewrite in {path}')
           path.write_text(text.replace(old_sed, new_sed))
