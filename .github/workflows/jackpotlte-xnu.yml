@@ -50,6 +50,7 @@ jobs:
           bash reference/tools/dreamlte/prep-xnu-tree.sh \
             "$PWD/work/jackpotlte-patches" "$PWD/work/xnu-prep"
           python3 tools/apply_jackpotlte_xnu.py work/xnu-prep/xnu
+          python3 tools/apply_jackpotlte_bootstrap.py work/xnu-prep/xnu
           cp -a work/xnu-prep/xnu dxb/xnu
 
       - name: Select Xcode 16.4
