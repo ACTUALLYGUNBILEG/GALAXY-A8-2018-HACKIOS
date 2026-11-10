@@ -102,6 +102,12 @@ jobs:
             if [ -z "$diagnostics" ]; then
               diagnostics=$(tail -n 80 out/build.log)
             fi
+            while IFS= read -r line; do
+              message=${line//'%'/'%25'}
+              message=${message//$'\r'/'%0D'}
+              message=${message//$'\n'/'%0A'}
+              echo "::error file=.github/workflows/jackpotlte-xnu.yml,line=82,title=XNU build diagnostic::$message"
+            done < <(printf '%s\n' "$diagnostics" | tail -n 12)
             {
               echo '## XNU build diagnostics'
               echo '```text'
