@@ -95,7 +95,7 @@ a5_clear_row"""),
 	/* arm_vm_init replaces TTBR0; low physical aliases then cease to exist. */
 	if (stage == 7) {
 		a5_active = 0;
-	}""", """if (!a5_active || stage > 120) {
+	}""", """if (!a5_active || stage > 220) {
 		return;
 	}
 	a5_string("A5 XNU STAGE ");
@@ -341,6 +341,65 @@ sweet_early_map_final(void)
          "\tvm_free_delayed_pages();\n\tsweet_early_mark(106, \"delayed pages freed\");\n"),
         ("\tvm_pageout();\n",
          "\tsweet_early_mark(107, \"entering vm_pageout\");\n\tvm_pageout();\n")
+    ])
+
+    patch(tree, "bsd/kern/bsd_init.c", [
+        ("#include <kern/startup.h>\n", "#include <kern/startup.h>\n#include <arm64/sweet_early.h>\n"),
+        ("\tthrottle_init();\n", "\tsweet_early_mark(108, \"throttle_init entered\");\n\tthrottle_init();\n\tsweet_early_mark(109, \"throttle_init returned\");\n"),
+        ("\tprintf(copyright);\n", "\tsweet_early_mark(110, \"copyright print entered\");\n\tprintf(copyright);\n\tsweet_early_mark(111, \"copyright print returned\");\n"),
+        ("#if CONFIG_DEV_KMEM\n\tbsd_init_kprintf(\"calling dev_kmem_init\\n\");", "\tsweet_early_mark(112, \"dev_kmem setup entered\");\n#if CONFIG_DEV_KMEM\n\tbsd_init_kprintf(\"calling dev_kmem_init\\n\");"),
+        ("\tdev_kmem_init();\n#endif\n\n\t/* Initialize kauth", "\tdev_kmem_init();\n#endif\n\tsweet_early_mark(113, \"dev_kmem setup returned\");\n\n\t/* Initialize kauth"),
+        ("\tkauth_init();\n", "\tsweet_early_mark(114, \"kauth_init entered\");\n\tkauth_init();\n\tsweet_early_mark(115, \"kauth_init returned\");\n"),
+        ("\tset_bsdtask_info(kernel_task, (void *)kernproc);\n", "\tsweet_early_mark(116, \"kernel task process link entered\");\n\tset_bsdtask_info(kernel_task, (void *)kernproc);\n\tsweet_early_mark(117, \"kernel task process link returned\");\n"),
+        ("\tprocess_name(\"kernel_task\", kernproc);\n", "\tsweet_early_mark(118, \"kernel process naming entered\");\n\tprocess_name(\"kernel_task\", kernproc);\n\tsweet_early_mark(119, \"kernel process naming returned\");\n"),
+        ("\tfdt_init(kernproc);\n", "\tsweet_early_mark(120, \"fdt_init entered\");\n\tfdt_init(kernproc);\n\tsweet_early_mark(121, \"fdt_init returned\");\n"),
+        ("\tut = current_uthread();\n", "\tsweet_early_mark(122, \"current_uthread entered\");\n\tut = current_uthread();\n\tsweet_early_mark(123, \"current_uthread returned\");\n"),
+        ("\tstruct session *session0 = session_alloc(kernproc);\n", "\tsweet_early_mark(124, \"process zero session setup entered\");\n\tstruct session *session0 = session_alloc(kernproc);\n"),
+        ("\tproc_list_unlock();\n\n\tproc_set_task(kernproc, kernel_task);", "\tproc_list_unlock();\n\tsweet_early_mark(125, \"process zero linked\");\n\n\tsweet_early_mark(126, \"proc_set_task entered\");\n\tproc_set_task(kernproc, kernel_task);\n\tsweet_early_mark(127, \"proc_set_task returned\");"),
+        ("\tproc_update_creds_onproc(kernproc);\n", "\tsweet_early_mark(128, \"proc credential update entered\");\n\tproc_update_creds_onproc(kernproc);\n\tsweet_early_mark(129, \"proc credential update returned\");\n"),
+        ("\t(void)chgproccnt(0, 1);\n", "\tsweet_early_mark(130, \"chgproccnt entered\");\n\t(void)chgproccnt(0, 1);\n\tsweet_early_mark(131, \"chgproccnt returned\");\n"),
+        ("\tbsd_init_kprintf(\"calling kmem_suballoc\\n\");\n\tbsd_pageable_map = kmem_suballoc(kernel_map,", "\tsweet_early_mark(132, \"BSD kmem_suballoc entered\");\n\tbsd_init_kprintf(\"calling kmem_suballoc\\n\");\n\tbsd_pageable_map = kmem_suballoc(kernel_map,"),
+        ("\t    VM_KERN_MEMORY_BSD).kmr_submap;\n", "\t    VM_KERN_MEMORY_BSD).kmr_submap;\n\tsweet_early_mark(133, \"BSD kmem_suballoc returned\");\n"),
+        ("\tbsd_bufferinit();\n", "\tsweet_early_mark(134, \"bsd_bufferinit entered\");\n\tbsd_bufferinit();\n\tsweet_early_mark(135, \"bsd_bufferinit returned\");\n"),
+        ("\tIOKitInitializeTime();\n", "\tsweet_early_mark(136, \"IOKitInitializeTime entered\");\n\tIOKitInitializeTime();\n\tsweet_early_mark(137, \"IOKitInitializeTime returned\");\n"),
+        ("\tvfsinit();\n", "\tsweet_early_mark(138, \"vfsinit entered\");\n\tvfsinit();\n\tsweet_early_mark(139, \"vfsinit returned\");\n"),
+        ("#if CONFIG_PROC_UUID_POLICY\n\t/* Initial proc_uuid_policy subsystem */", "\tsweet_early_mark(142, \"proc UUID policy setup entered\");\n#if CONFIG_PROC_UUID_POLICY\n\t/* Initial proc_uuid_policy subsystem */"),
+        ("\tproc_uuid_policy_init();\n#endif\n\n#if SOCKETS", "\tproc_uuid_policy_init();\n#endif\n\tsweet_early_mark(143, \"proc UUID policy setup returned\");\n\n#if SOCKETS"),
+        ("\tmbinit();\n", "\tsweet_early_mark(144, \"mbinit entered\");\n\tmbinit();\n\tsweet_early_mark(145, \"mbinit returned\");\n"),
+        ("#if CONFIG_AUDIT\n\tbsd_init_kprintf(\"calling audit_init\\n\");", "\tsweet_early_mark(146, \"audit initialization entered\");\n#if CONFIG_AUDIT\n\tbsd_init_kprintf(\"calling audit_init\\n\");"),
+        ("\taudit_init();\n#endif\n\n\t/* Initialize kqueues */", "\taudit_init();\n#endif\n\tsweet_early_mark(147, \"audit initialization returned\");\n\n\t/* Initialize kqueues */"),
+        ("\tknote_init();\n", "\tsweet_early_mark(148, \"knote_init entered\");\n\tknote_init();\n\tsweet_early_mark(149, \"knote_init returned\");\n"),
+        ("\teventhandler_init();\n", "\tsweet_early_mark(150, \"eventhandler_init entered\");\n\teventhandler_init();\n\tsweet_early_mark(151, \"eventhandler_init returned\");\n"),
+        ("\taio_init();\n", "\tsweet_early_mark(152, \"aio_init entered\");\n\taio_init();\n\tsweet_early_mark(153, \"aio_init returned\");\n"),
+        ("\tpthread_init();\n", "\tsweet_early_mark(154, \"pthread_init entered\");\n\tpthread_init();\n\tsweet_early_mark(155, \"pthread_init returned\");\n"),
+        ("\tpshm_cache_init();\n", "\tsweet_early_mark(156, \"pshm_cache_init entered\");\n\tpshm_cache_init();\n\tsweet_early_mark(157, \"pshm_cache_init returned\");\n"),
+        ("\tpsem_cache_init();\n", "\tsweet_early_mark(158, \"psem_cache_init entered\");\n\tpsem_cache_init();\n\tsweet_early_mark(159, \"psem_cache_init returned\");\n"),
+        ("\tnwk_wq_init();\n", "\tsweet_early_mark(160, \"nwk_wq_init entered\");\n\tnwk_wq_init();\n\tsweet_early_mark(161, \"nwk_wq_init returned\");\n"),
+        ("\tdlil_init();\n", "\tsweet_early_mark(162, \"dlil_init entered\");\n\tdlil_init();\n\tsweet_early_mark(163, \"dlil_init returned\");\n"),
+        ("\tsocketinit();\n", "\tsweet_early_mark(164, \"socketinit entered\");\n\tsocketinit();\n\tsweet_early_mark(165, \"socketinit returned\");\n"),
+        ("\tdomaininit();\n", "\tsweet_early_mark(166, \"domaininit entered\");\n\tdomaininit();\n\tsweet_early_mark(167, \"domaininit returned\");\n"),
+        ("\t(void) skywalk_init();\n", "\tsweet_early_mark(168, \"skywalk_init entered\");\n\t(void) skywalk_init();\n\tsweet_early_mark(169, \"skywalk_init returned\");\n"),
+        ("\tmemorystatus_freeze_init();\n", "\tsweet_early_mark(170, \"memorystatus_freeze_init entered\");\n\tmemorystatus_freeze_init();\n\tsweet_early_mark(171, \"memorystatus_freeze_init returned\");\n"),
+        ("\tmemorystatus_init();\n", "\tsweet_early_mark(172, \"memorystatus_init entered\");\n\tmemorystatus_init();\n\tsweet_early_mark(173, \"memorystatus_init returned\");\n"),
+        ("\tsysctl_mib_init();\n", "\tsweet_early_mark(174, \"sysctl_mib_init entered\");\n\tsysctl_mib_init();\n\tsweet_early_mark(175, \"sysctl_mib_init returned\");\n"),
+        ("\tbsd_autoconf();\n", "\tsweet_early_mark(176, \"bsd_autoconf entered\");\n\tbsd_autoconf();\n\tsweet_early_mark(177, \"bsd_autoconf returned\");\n"),
+        ("\tloopattach();                   /* XXX */\n", "\tsweet_early_mark(178, \"loopattach entered\");\n\tloopattach();                   /* XXX */\n\tsweet_early_mark(179, \"loopattach returned\");\n"),
+        ("\tether_family_init();\n", "\tsweet_early_mark(180, \"ether_family_init entered\");\n\tether_family_init();\n\tsweet_early_mark(181, \"ether_family_init returned\");\n"),
+        ("\tnet_init_run();\n", "\tsweet_early_mark(182, \"net_init_run entered\");\n\tnet_init_run();\n\tsweet_early_mark(183, \"net_init_run returned\");\n"),
+        ("\tinittodr(0);\n", "\tsweet_early_mark(184, \"inittodr entered\");\n\tinittodr(0);\n\tsweet_early_mark(185, \"inittodr returned\");\n"),
+        ("\t\tsetconf();\n", "\t\tsweet_early_mark(186, \"setconf entered\");\n\t\tsetconf();\n\t\tsweet_early_mark(187, \"setconf returned\");\n"),
+        ("\t\tif (0 == (err = vfs_mountroot())) {\n", "\t\tsweet_early_mark(188, \"vfs_mountroot entered\");\n\t\tif (0 == (err = vfs_mountroot())) {\n\t\t\tsweet_early_mark(189, \"vfs_mountroot returned\");\n"),
+        ("\tIOSecureBSDRoot(rootdevice);\n", "\tsweet_early_mark(190, \"IOSecureBSDRoot entered\");\n\tIOSecureBSDRoot(rootdevice);\n\tsweet_early_mark(191, \"IOSecureBSDRoot returned\");\n"),
+        ("\tif (VFS_ROOT(mountlist.tqh_first, &init_rootvnode, vfs_context_kernel())) {\n", "\tsweet_early_mark(192, \"VFS_ROOT entered\");\n\tif (VFS_ROOT(mountlist.tqh_first, &init_rootvnode, vfs_context_kernel())) {\n"),
+        ("\tinit_rootvnode = NULLVP;  /* use rootvnode after this point */\n", "\tinit_rootvnode = NULLVP;  /* use rootvnode after this point */\n\tsweet_early_mark(193, \"root vnode setup returned\");\n"),
+        ("#if DEVFS\n\t{\n\t\tchar mounthere[] = \"/dev\";", "\tsweet_early_mark(194, \"devfs mount entered\");\n#if DEVFS\n\t{\n\t\tchar mounthere[] = \"/dev\";"),
+        ("\t}\n#endif /* DEVFS */\n\n#if CONFIG_BASESYSTEMROOT", "\t}\n#endif /* DEVFS */\n\tsweet_early_mark(195, \"devfs mount returned\");\n\n#if CONFIG_BASESYSTEMROOT"),
+        ("\tsiginit(kernproc);\n", "\tsweet_early_mark(196, \"siginit entered\");\n\tsiginit(kernproc);\n\tsweet_early_mark(197, \"siginit returned\");\n"),
+        ("\tbsd_utaskbootstrap();\n", "\tsweet_early_mark(198, \"bsd_utaskbootstrap entered\");\n\tbsd_utaskbootstrap();\n\tsweet_early_mark(199, \"bsd_utaskbootstrap returned\");\n"),
+        ("\tpal_kernel_announce();\n", "\tsweet_early_mark(200, \"pal_kernel_announce entered\");\n\tpal_kernel_announce();\n\tsweet_early_mark(201, \"pal_kernel_announce returned\");\n"),
+        ("\tbsd_init_kprintf(\"calling mountroot_post_hook\\n\");\n", "\tsweet_early_mark(202, \"mountroot_post_hook entered\");\n\tbsd_init_kprintf(\"calling mountroot_post_hook\\n\");\n"),
+        ("#endif\n\n#if 0 /* not yet */\n\tconsider_zone_gc(FALSE);", "#endif\n\tsweet_early_mark(203, \"mountroot_post_hook returned\");\n\n#if 0 /* not yet */\n\tconsider_zone_gc(FALSE);"),
+        ("\tbsd_init_kprintf(\"done\\n\");\n}\n", "\tbsd_init_kprintf(\"done\\n\");\n\tsweet_early_mark(204, \"bsd_init complete\");\n}\n")
     ])
 
     patch(tree, "osfmk/vm/vm_init.c", [
