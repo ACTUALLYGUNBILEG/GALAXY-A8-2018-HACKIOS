@@ -95,12 +95,15 @@ a5_clear_row"""),
 	/* arm_vm_init replaces TTBR0; low physical aliases then cease to exist. */
 	if (stage == 7) {
 		a5_active = 0;
-	}""", """if (!a5_active || stage > 90) {
+	}""", """if (!a5_active || stage > 120) {
 		return;
 	}
 	a5_string("A5 XNU STAGE ");
+	if (stage >= 100) {
+		sweet_early_putc((char)('0' + stage / 100));
+	}
 	if (stage >= 10) {
-		sweet_early_putc((char)('0' + stage / 10));
+		sweet_early_putc((char)('0' + (stage / 10) % 10));
 	}
 	sweet_early_putc((char)('0' + stage % 10));
 	a5_string(": ");
@@ -299,7 +302,45 @@ sweet_early_map_final(void)
         ("\t(void) spllo();         /* Allow interruptions */\n",
          "\t(void) spllo();         /* Allow interruptions */\n\tsweet_early_mark(81, \"interrupts enabled\");\n"),
         ("\tinitialize_screen(NULL, kPEAcquireScreen);\n",
-         "\tinitialize_screen(NULL, kPEAcquireScreen);\n\tsweet_early_mark(82, \"initialize_screen returned\");\n")
+         "\tinitialize_screen(NULL, kPEAcquireScreen);\n\tsweet_early_mark(82, \"initialize_screen returned\");\n"),
+        ("\tvm_commpage_init();\n",
+         "\tsweet_early_mark(83, \"enter vm_commpage_init\");\n\tvm_commpage_init();\n\tsweet_early_mark(84, \"vm_commpage_init returned\");\n"),
+        ("\tvm_commpage_text_init();\n",
+         "\tvm_commpage_text_init();\n\tsweet_early_mark(85, \"commpage text returned\");\n"),
+        ("#if CONFIG_MACF\n\tkernel_bootstrap_log(\"mac_policy_initmach\");",
+         "\tsweet_early_mark(86, \"early policy setup entered\");\n#if CONFIG_MACF\n\tkernel_bootstrap_log(\"mac_policy_initmach\");"),
+        ("#endif /* CODE_SIGNING_MONITOR */\n\n#ifndef BCM2837",
+         "#endif /* CODE_SIGNING_MONITOR */\n\tsweet_early_mark(87, \"early policy setup returned\");\n\n#ifndef BCM2837"),
+        ("\ttrust_cache_runtime_init();\n",
+         "\tsweet_early_mark(88, \"trust runtime entered\");\n\ttrust_cache_runtime_init();\n\tsweet_early_mark(89, \"trust runtime returned\");\n"),
+        ("\tload_static_trust_cache();\n",
+         "\tsweet_early_mark(90, \"static trust cache entered\");\n\tload_static_trust_cache();\n\tsweet_early_mark(91, \"static trust cache returned\");\n"),
+        ("\tkernel_startup_initialize_upto(STARTUP_SUB_LOCKDOWN);\n",
+         "\tkernel_startup_initialize_upto(STARTUP_SUB_LOCKDOWN);\n\tsweet_early_mark(92, \"STARTUP_SUB_LOCKDOWN returned\");\n"),
+        ("\tOSKextRemoveKextBootstrap();\n",
+         "\tsweet_early_mark(93, \"kext removal entered\");\n\tOSKextRemoveKextBootstrap();\n\tsweet_early_mark(94, \"kext removal returned\");\n"),
+        ("\tmachine_lockdown();\n",
+         "\tsweet_early_mark(95, \"machine lockdown entered\");\n\tmachine_lockdown();\n\tsweet_early_mark(96, \"machine lockdown returned\");\n"),
+        ("#ifdef  IOKIT\n\tkernel_bootstrap_log(\"PE_lockdown_iokit\");",
+         "\tsweet_early_mark(97, \"IOKit lockdown entered\");\n#ifdef  IOKIT\n\tkernel_bootstrap_log(\"PE_lockdown_iokit\");"),
+        ("\tPE_lockdown_iokit();\n#endif\n\t/*\n\t * max_cpus",
+         "\tPE_lockdown_iokit();\n#endif\n\tsweet_early_mark(98, \"IOKit lockdown returned\");\n\t/*\n\t * max_cpus"),
+        ("\tvm_set_restrictions(machine_info.max_cpus);\n",
+         "\tvm_set_restrictions(machine_info.max_cpus);\n\tsweet_early_mark(99, \"vm restrictions returned\");\n"),
+        ("#ifdef  MACH_BSD\n\tbsd_init();\n#endif",
+         "\tsweet_early_mark(100, \"BSD init entered\");\n#ifdef  MACH_BSD\n\tbsd_init();\n#endif\n\tsweet_early_mark(101, \"BSD init returned\");"),
+        ("\tkdebug_free_early_buf();\n",
+         "\tkdebug_free_early_buf();\n\tsweet_early_mark(102, \"early kdebug buffer freed\");\n"),
+        ("\tserial_keyboard_init();         /* Start serial keyboard if wanted */\n",
+         "\tserial_keyboard_init();         /* Start serial keyboard if wanted */\n\tsweet_early_mark(103, \"serial keyboard init returned\");\n"),
+        ("\tvm_page_init_local_q(machine_info.max_cpus);\n",
+         "\tvm_page_init_local_q(machine_info.max_cpus);\n\tsweet_early_mark(104, \"local page queue returned\");\n"),
+        ("\tthread_bind(PROCESSOR_NULL);\n",
+         "\tthread_bind(PROCESSOR_NULL);\n\tsweet_early_mark(105, \"boot thread unbound\");\n"),
+        ("\tvm_free_delayed_pages();\n",
+         "\tvm_free_delayed_pages();\n\tsweet_early_mark(106, \"delayed pages freed\");\n"),
+        ("\tvm_pageout();\n",
+         "\tsweet_early_mark(107, \"entering vm_pageout\");\n\tvm_pageout();\n")
     ])
 
     patch(tree, "osfmk/vm/vm_init.c", [
