@@ -432,6 +432,22 @@ sweet_early_map_final(void)
          "\t\tsweet_early_mark(213, \"root service wait entered\");\n"
          "\t\tservice = IOService::waitForService( matching, &t );\n"
          "\t\tsweet_early_mark(214, \"root service wait returned\");\n"),
+        ("\t\tif ((!service) || (mountAttempts == 10)) {\n",
+         "\t\tif ((!service) || (mountAttempts == 10)) {\n"
+         "\t\t\tsweet_early_mark(216, \"root service missing path entered\");\n"),
+        ("\t\t\tPE_display_icon( 0, \"noroot\");\n",
+         "\t\t\tsweet_early_mark(217, \"no-root icon entered\");\n"
+         "\t\t\tPE_display_icon( 0, \"noroot\");\n"
+         "\t\t\tsweet_early_mark(218, \"no-root icon returned\");\n"),
+        ("\t\t\tIOLog( \"Still waiting for root device\\n\" );\n",
+         "\t\t\tIOLog( \"Still waiting for root device\\n\" );\n"
+         "\t\t\tsweet_early_mark(219, \"root wait log returned\");\n"),
+        ("#if XNU_TARGET_OS_OSX && defined(__arm64__)\n\t\t\t// The disk isn't found - have the user pick from System Recovery.\n",
+         "\t\t\tsweet_early_mark(220, \"no-root diagnostics complete\");\n"
+         "#if XNU_TARGET_OS_OSX && defined(__arm64__)\n\t\t\t// The disk isn't found - have the user pick from System Recovery.\n"),
+        ("\t\t\tpanic(\"Failed to mount root device\");\n",
+         "\t\t\tsweet_early_mark(221, \"root device panic entered\");\n"
+         "\t\t\tpanic(\"Failed to mount root device\");\n"),
         ("\t} while (!service);\n\n\tOSSafeReleaseNULL(matching);\n\n\tif (service && mediaProperty) {\n",
          "\t} while (!service);\n\tsweet_early_mark(215, \"root service selected\");\n"
          "\tOSSafeReleaseNULL(matching);\n\n\tif (service && mediaProperty) {\n")
