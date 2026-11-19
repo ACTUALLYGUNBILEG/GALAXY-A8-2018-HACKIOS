@@ -414,6 +414,31 @@ sweet_early_map_final(void)
     patch(tree, "iokit/bsddev/IOKitBSDInit.cpp", [
         ("extern \"C\" {\n#include <libkern/amfi/amfi.h>\n",
          "extern \"C\" {\n#include <arm64/sweet_early.h>\n#include <libkern/amfi/amfi.h>\n"),
+        ("IOSetRecoveryBoot(bsd_bootfail_mode_t mode, uuid_t volume_uuid, boolean_t reboot)\n{\n",
+         "IOSetRecoveryBoot(bsd_bootfail_mode_t mode, uuid_t volume_uuid, boolean_t reboot)\n{\n"
+         "\tsweet_early_mark(223, \"recovery function entered\");\n"),
+        ("\t\t// Wait for NVRAM to be readable...\n\t\tnvram = OSDynamicCast(IODTNVRAM, IOService::waitForService(\n\t\t\t    IOService::serviceMatching(\"IODTNVRAM\")));\n",
+         "\t\t// Wait for NVRAM to be readable...\n"
+         "\t\tsweet_early_mark(224, \"IODTNVRAM wait entered\");\n"
+         "\t\tnvram = OSDynamicCast(IODTNVRAM, IOService::waitForService(\n\t\t\t    IOService::serviceMatching(\"IODTNVRAM\")));\n"
+         "\t\tsweet_early_mark(225, \"IODTNVRAM wait returned\");\n"),
+        ("\t\tif (!IOServiceWaitForMatchingResource(\"IONVRAM\", UINT64_MAX)) {\n",
+         "\t\tsweet_early_mark(226, \"IONVRAM resource wait entered\");\n"
+         "\t\tif (!IOServiceWaitForMatchingResource(\"IONVRAM\", UINT64_MAX)) {\n"),
+        ("\t\t// Write the new boot-command to NVRAM, and sync if successful.\n",
+         "\t\tsweet_early_mark(227, \"IONVRAM resource wait returned\");\n"
+         "\t\t// Write the new boot-command to NVRAM, and sync if successful.\n"),
+        ("\tif (reboot) {\n\t\tIOLog(\"\\nAbout to reboot into Recovery!\\n\");\n\t\t(void)PEHaltRestart(kPERestartCPU);\n\t}\n",
+         "\tif (reboot) {\n"
+         "\t\tIOLog(\"\\nAbout to reboot into Recovery!\\n\");\n"
+         "\t\tsweet_early_mark(228, \"recovery restart entered\");\n"
+         "\t\t(void)PEHaltRestart(kPERestartCPU);\n"
+         "\t\tsweet_early_mark(229, \"recovery restart returned\");\n"
+         "\t}\n"),
+        ("\t\t\t(void)IOSetRecoveryBoot(BSD_BOOTFAIL_MEDIA_MISSING, NULL, true);\n",
+         "\t\t\tsweet_early_mark(222, \"recovery call entered\");\n"
+         "\t\t\t(void)IOSetRecoveryBoot(BSD_BOOTFAIL_MEDIA_MISSING, NULL, true);\n"
+         "\t\t\tsweet_early_mark(230, \"recovery call returned\");\n"),
         ("\tmatching->setObject(gIOResourceMatchedKey, gIOBSDKey);\n",
          "\tmatching->setObject(gIOResourceMatchedKey, gIOBSDKey);\n"
          "\tsweet_early_mark(208, \"IOBSD resource wait entered\");\n"),
