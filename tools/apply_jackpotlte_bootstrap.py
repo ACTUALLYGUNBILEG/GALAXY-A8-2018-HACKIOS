@@ -411,6 +411,32 @@ sweet_early_map_final(void)
          "\t}\n\tsweet_early_mark(207, \"root device selection complete\");\n\n#if CONFIG_NETBOOT\n\tif (flags & 1) {\n")
     ])
 
+    patch(tree, "iokit/bsddev/IOKitBSDInit.cpp", [
+        ("extern \"C\" {\n#include <libkern/amfi/amfi.h>\n",
+         "extern \"C\" {\n#include <arm64/sweet_early.h>\n#include <libkern/amfi/amfi.h>\n"),
+        ("\tmatching->setObject(gIOResourceMatchedKey, gIOBSDKey);\n",
+         "\tmatching->setObject(gIOResourceMatchedKey, gIOBSDKey);\n"
+         "\tsweet_early_mark(208, \"IOBSD resource wait entered\");\n"),
+        ("\t} else {\n\t\tIOLog(\"!BSD\\n\");\n\t}\n\tmatching->release();\n\tmatching = NULL;\n",
+         "\t} else {\n\t\tIOLog(\"!BSD\\n\");\n\t}\n"
+         "\tsweet_early_mark(209, \"IOBSD resource wait returned\");\n"
+         "\tmatching->release();\n\tmatching = NULL;\n"),
+        ("\t\tOSSafeReleaseNULL(regEntry);\n\t}\n\n//\n//\tSee if we have a RAMDisk property in /chosen/memory-map.",
+         "\t\tOSSafeReleaseNULL(regEntry);\n\t}\n"
+         "\tsweet_early_mark(210, \"chosen root properties checked\");\n\n//\n//\tSee if we have a RAMDisk property in /chosen/memory-map."),
+        ("\t}\n\n#if defined(ARM64_BOARD_CONFIG_SWEET)\n//\n//\tSWEET: root on a GPT partition of the internal UFS",
+         "\t}\n\tsweet_early_mark(211, \"RAMDisk device check complete\");\n\n#if defined(ARM64_BOARD_CONFIG_SWEET)\n//\n//\tSWEET: root on a GPT partition of the internal UFS"),
+        ("\t}\n\n\tif (gIOKitDebug & kIOWaitQuietBeforeRoot) {\n",
+         "\t}\n\tsweet_early_mark(212, \"root matching prepared\");\n\n\tif (gIOKitDebug & kIOWaitQuietBeforeRoot) {\n"),
+        ("\t\tservice = IOService::waitForService( matching, &t );\n",
+         "\t\tsweet_early_mark(213, \"root service wait entered\");\n"
+         "\t\tservice = IOService::waitForService( matching, &t );\n"
+         "\t\tsweet_early_mark(214, \"root service wait returned\");\n"),
+        ("\t} while (!service);\n\n\tOSSafeReleaseNULL(matching);\n\n\tif (service && mediaProperty) {\n",
+         "\t} while (!service);\n\tsweet_early_mark(215, \"root service selected\");\n"
+         "\tOSSafeReleaseNULL(matching);\n\n\tif (service && mediaProperty) {\n")
+    ])
+
     patch(tree, "osfmk/vm/vm_init.c", [
         ("#include <vm/vm_init.h>\n", "#include <vm/vm_init.h>\n#include <arm64/sweet_early.h>\n"),
         ("\tvm_page_bootstrap(&start, &end);\n",
