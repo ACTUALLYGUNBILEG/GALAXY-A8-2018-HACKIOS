@@ -402,6 +402,15 @@ sweet_early_map_final(void)
         ("\tbsd_init_kprintf(\"done\\n\");\n}\n", "\tbsd_init_kprintf(\"done\\n\");\n\tsweet_early_mark(204, \"bsd_init complete\");\n}\n")
     ])
 
+    patch(tree, "bsd/kern/bsd_init.c", [
+        ("\terr = IOFindBSDRoot(rootdevice, sizeof(rootdevice), &rootdev, &flags);\n",
+         "\tsweet_early_mark(205, \"IOFindBSDRoot entered\");\n"
+         "\terr = IOFindBSDRoot(rootdevice, sizeof(rootdevice), &rootdev, &flags);\n"
+         "\tsweet_early_mark(206, \"IOFindBSDRoot returned\");\n"),
+        ("\t}\n\n#if CONFIG_NETBOOT\n\tif (flags & 1) {\n",
+         "\t}\n\tsweet_early_mark(207, \"root device selection complete\");\n\n#if CONFIG_NETBOOT\n\tif (flags & 1) {\n")
+    ])
+
     patch(tree, "osfmk/vm/vm_init.c", [
         ("#include <vm/vm_init.h>\n", "#include <vm/vm_init.h>\n#include <arm64/sweet_early.h>\n"),
         ("\tvm_page_bootstrap(&start, &end);\n",
