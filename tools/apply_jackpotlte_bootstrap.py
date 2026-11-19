@@ -110,6 +110,7 @@ a5_clear_row"""),
 	a5_string(label);
 	sweet_early_putc('\\n');
 	a5_decon_flush();"""),
+        ("if (!a5_active || stage > 220) {", "if (!a5_active || stage > 240) {"),
         ("""sweet_early_putc('\\n');
 	__asm__ volatile("dsb sy" ::: "memory");
 }
